@@ -49,11 +49,10 @@ resource "google_cloud_run_v2_service" "this" {
   project  = var.project_id
   name     = var.name
   location = each.key
-  labels = var.labels
+  labels   = var.labels
   ingress  = var.ingress
 
   launch_stage = "BETA" // Needed for vpc_access below
-
 
   template {
     scaling {
@@ -215,33 +214,33 @@ resource "google_monitoring_alert_policy" "anomalous-service-access" {
       logName="projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity"
       protoPayload.serviceName="run.googleapis.com"
       protoPayload.resourceName=("${join("\" OR \"", concat([
-        "namespaces/${var.project_id}/services/${var.name}"
-      ],
-      [
-        for region in keys(var.regions) : "projects/${var.project_id}/locations/${region}/services/${var.name}"
-      ]))}")
+      "namespaces/${var.project_id}/services/${var.name}"
+    ],
+    [
+      for region in keys(var.regions) : "projects/${var.project_id}/locations/${region}/services/${var.name}"
+    ]))}")
 
       -- Allow CI to reconcile services and their IAM policies.
       -(
         protoPayload.authenticationInfo.principalEmail="${data.google_client_openid_userinfo.me.email}"
         protoPayload.methodName=("${join("\" OR \"", [
-          "google.cloud.run.v2.Services.CreateService",
-          "google.cloud.run.v2.Services.UpdateService",
-          "google.cloud.run.v2.Services.SetIamPolicy",
-        ])}")
+    "google.cloud.run.v2.Services.CreateService",
+    "google.cloud.run.v2.Services.UpdateService",
+    "google.cloud.run.v2.Services.SetIamPolicy",
+])}")
       )
       EOT
 
-      label_extractors = {
-        "subject" = "EXTRACT(protoPayload.authenticationInfo.principalSubject)"
-      }
-    }
-  }
+label_extractors = {
+  "subject" = "EXTRACT(protoPayload.authenticationInfo.principalSubject)"
+}
+}
+}
 
-  notification_channels = var.notification_channels
+notification_channels = var.notification_channels
 
-  enabled = "true"
-  project = var.project_id
+enabled = "true"
+project = var.project_id
 }
 
 // When the service is behind a load balancer, then it is publicly exposed and responsible
